@@ -29,11 +29,11 @@ venv
 .venv
 
 # Build files
-build
-site
+/build/
+/site/
 
 # Distribution files
-dist
+/dist/
 mkdocs_material.egg-info
 
 # Caches and logs
