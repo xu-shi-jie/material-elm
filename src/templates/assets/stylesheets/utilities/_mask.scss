@@ -1,0 +1,90 @@
+////
+/// Copyright (c) 2016-2025 Martin Donath <martin.donath@squidfunk.com>
+///
+/// Permission is hereby granted, free of charge, to any person obtaining a
+/// copy of this software and associated documentation files (the "Software"),
+/// to deal in the Software without restriction, including without limitation
+/// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+/// and/or sell copies of the Software, and to permit persons to whom the
+/// Software is furnished to do so, subject to the following conditions:
+///
+/// The above copyright notice and this permission notice shall be included in
+/// all copies or substantial portions of the Software.
+///
+/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+/// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+/// FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL
+/// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+/// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+/// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+/// DEALINGS
+////
+
+// ----------------------------------------------------------------------------
+// Helpers
+// ----------------------------------------------------------------------------
+
+///
+/// Render a mask-image icon without WebKit's speckle artifact
+///
+/// Safari paints `mask-image` incorrectly on the normal, non-composited paint
+/// path: the masked element is fringed with bright speckles, most visible on a
+/// tinted background. It affects every icon this theme draws, because all of
+/// them are a solid `background-color` knocked out by a mask.
+///
+/// MEASURED, not assumed. A probe isolating one variable per cell was rendered
+/// in Safari on macOS (2026-09-13): an identical path drawn as an inline `svg`
+/// is clean, and so is the same path as `background-image`, so the defect is in
+/// the mask path rather than in the artwork. Giving the icon an integer pixel
+/// size does NOT help, nor does adding `width`/`height` to the SVG, nor
+/// `mask-size: 100% 100%`, nor switching the data URI between percent-encoding
+/// and base64. Promoting the element to its own compositing layer DOES, by
+/// either `translateZ(0)` or `will-change: transform`.
+///
+/// TWO THINGS HAVE BEEN MEASURED NOT TO WORK, both of them attempts to keep the
+/// promotion from being overwritten. `transform: translateZ(0)` was the first
+/// fix, and `transform` is a single property, so every rule that sets a
+/// transform on the same element REPLACED it and the speckles came back. That
+/// was not a corner case: `details[open] > summary` rotates its chevron 90
+/// degrees at a higher specificity than this mixin's own selector, so an OPEN
+/// collapsible box lost the fix while a closed one kept it. The second attempt
+/// was `translate: 0 0 0.0001px`, an independent transform property, which
+/// composes with `transform` instead of replacing it -- it composes as the
+/// specification says, and Safari promotes nothing for it (measured on macOS,
+/// 2026-09-15). Composing correctly is not the same as promoting.
+///
+/// So the promotion is requested by `will-change`, which names the property
+/// rather than occupying it and therefore survives every rotation and flip.
+/// The earlier objection to it was that it holds the promotion permanently,
+/// and that objection does not survive inspection: `translateZ(0)` creates
+/// exactly the same permanent layer, so `will-change` is not buying a cost the
+/// original fix avoided. A 16px icon's layer is about a kilobyte.
+///
+/// `mask-transform` is the belt to that braces. Where an icon carries its own
+/// transform it emits the composed value as well, so the promotion is requested
+/// twice by two independent mechanisms and one of them failing is not visible.
+///
+/// Both are scoped to Safari so no other engine pays for a layer per icon;
+/// `-webkit-hyphens` is the feature query because Safari still needs the prefix
+/// where the others do not.
+///
+@mixin mask-icon {
+  @supports (-webkit-hyphens: none) {
+    will-change: transform;
+  }
+}
+
+///
+/// Set a transform on an icon that is already promoted by `mask-icon`
+///
+/// Use in place of a bare `transform` declaration on any masked icon. Outside
+/// Safari it is the plain value; inside Safari it carries `translateZ(0)` too,
+/// so the element keeps a 3D transform of its own whatever `will-change` does.
+///
+@mixin mask-transform($value) {
+  transform: $value;
+
+  @supports (-webkit-hyphens: none) {
+    transform: $value translateZ(0);
+  }
+}

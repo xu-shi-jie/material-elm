@@ -1,0 +1,24 @@
+site_name: Native theme demo
+site_url: https://example.org/
+theme:
+  name: material-elm
+  features:
+    - content.code.copy
+    - content.tabs.link
+    - navigation.top
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/white-balance-sunny
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+plugins:
+  - search
+  - material-elm/native
+markdown_extensions:
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
